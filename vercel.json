@@ -1,0 +1,20 @@
+{
+  "name": "flowise-frontend",
+  "version": 2,
+  "public": false,
+  "framework": "vite",
+  "buildCommand": "cd packages/ui && npm install --legacy-peer-deps && npm run build:vercel",
+  "outputDirectory": "packages/ui/build",
+  "installCommand": "npm install --legacy-peer-deps",
+  "devCommand": "cd packages/ui && npm run dev",
+  "env": {
+    "VITE_API_BASE_URL": "https://YOUR_RENDER_URL_HERE.onrender.com",
+    "NODE_ENV": "production"
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://YOUR_RENDER_URL_HERE.onrender.com/api/$1"
+    }
+  ]
+}

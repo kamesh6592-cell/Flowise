@@ -80,7 +80,7 @@
         "dev": "vite",
         "start": "vite",
         "build": "vite build",
-        "build:vercel": "npm install --legacy-peer-deps && vite build --mode production",
+        "build:vercel": "vite build --mode production",
         "clean": "rimraf build",
         "nuke": "rimraf build node_modules .turbo"
     },
