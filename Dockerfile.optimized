@@ -1,0 +1,59 @@
+# Multi-stage build to reduce final image size
+FROM node:20-alpine AS builder
+
+# Install build dependencies only
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    build-base
+
+# Install pnpm
+RUN npm install -g pnpm
+
+WORKDIR /usr/src/flowise
+
+# Copy package files first (for better caching)
+COPY package*.json pnpm*.yaml ./
+COPY packages/*/package.json ./packages/*/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN pnpm build
+
+# Production stage - much smaller
+FROM node:20-alpine AS production
+
+# Install only runtime dependencies
+RUN apk add --no-cache \
+    dumb-init \
+    chromium
+
+# Set Puppeteer to use installed Chromium
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV NODE_ENV=production
+ENV NODE_OPTIONS=--max-old-space-size=2048
+
+WORKDIR /usr/src/flowise
+
+# Copy built application from builder stage
+COPY --from=builder --chown=node:node /usr/src/flowise/dist ./dist
+COPY --from=builder --chown=node:node /usr/src/flowise/packages ./packages
+COPY --from=builder --chown=node:node /usr/src/flowise/node_modules ./node_modules
+COPY --from=builder --chown=node:node /usr/src/flowise/package.json ./
+COPY --from=builder --chown=node:node /usr/src/flowise/pnpm-lock.yaml ./
+
+# Use non-root user
+USER node
+
+EXPOSE 3000
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "packages/server/dist/index.js"]
